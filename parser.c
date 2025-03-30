@@ -2,8 +2,9 @@
 
 #include <stdlib.h>
 #include <string.h>
-
 #include "utils.h"
+
+#define MAX_STACK_SIZE 200
 
 int get_precedence(const char* op) {
     if (strcmp(op, "sin") == 0 || strcmp(op, "cos") == 0 || strcmp(op, "tan") == 0 ||
@@ -14,6 +15,19 @@ int get_precedence(const char* op) {
     if (strcmp(op, "*") == 0 || strcmp(op, "/") == 0) return 2;
     if (strcmp(op, "+") == 0 || strcmp(op, "-") == 0) return 1;
     return 0;
+}   
+
+int is_operator(const char *token) {
+    return strcmp(token, "+") == 0 || 
+           strcmp(token, "-") == 0 || 
+           strcmp(token, "*") == 0 || 
+           strcmp(token, "/") == 0 ||
+           strcmp(token, "u-") == 0 ||
+           strcmp(token, "^") == 0; 
+}
+
+int is_variable(const char *token) {
+    return strcmp(token, "x") == 0;
 }
 
 int is_function(const char* str) {
@@ -132,4 +146,62 @@ void infix_to_rpn(const char* infix, char* rpn) {
 
     rpn[j] = '\0';
     stack_free(&s);
+}
+
+int check_rpn(const char *expression) {
+    int stack_size = 0;
+    char *expr_copy = strdup(expression);
+    char *token = strtok(expr_copy, " ");
+    
+    while (token != NULL && stack_size < MAX_STACK_SIZE) {
+        if (is_digit(token[0]) || 
+            (token[0] == '-' && is_digit(token[1]) && strlen(token) > 1) || 
+            (strcmp(token, "(") == 0) ||
+            is_variable(token)) {
+            
+            stack_size++;
+        } 
+        else if (strcmp(token, ")") == 0) {
+            
+            if (stack_size < 1) {
+                free(expr_copy);
+                return 0;
+            }
+            stack_size--;
+        }
+        else if (is_operator(token)) {
+            
+            if (strcmp(token, "u-") == 0) {
+                
+                if (stack_size < 1) {
+                    free(expr_copy);
+                    return 0;
+                }
+            } else {
+                
+                if (stack_size < 2) {
+                    free(expr_copy);
+                    return 0;
+                }
+                stack_size--;
+            }
+        }
+        else if (is_function(token)) {
+            
+            if (stack_size < 1) {
+                free(expr_copy);
+                return 0;
+            }
+        }
+        else {
+            
+            free(expr_copy);
+            return 0;
+        }
+        
+        token = strtok(NULL, " ");
+    }
+    
+    free(expr_copy);
+    return stack_size == 1; 
 }

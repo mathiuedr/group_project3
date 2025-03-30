@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
 #include "stack.h"
 #include "utils.h"
 
@@ -17,28 +18,33 @@ int eval_functions(const char* token, num_stack* s, int* is_error, double x) {
         num_stack_push(s, cos(num_stack_pop(s)));
     } else if (strcmp(token, "tan") == 0) {
         double val = num_stack_pop(s);
-        if (fabs(cos(val)) < 1e-10)
+        if (fabs(cos(val)) < 1e-10) {
             *is_error = 1;
-        else
+        } else {
             num_stack_push(s, tan(val));
+        }
     } else if (strcmp(token, "ctg") == 0) {
         double val = num_stack_pop(s);
-        if (fabs(sin(val)) < 1e-10)
+        if (fabs(sin(val)) < 1e-10) {
             *is_error = 1;
-        else
+        } else {
             num_stack_push(s, 1.0 / tan(val));
+        }
+
     } else if (strcmp(token, "sqrt") == 0) {
         double val = num_stack_pop(s);
-        if (val < 0)
+        if (val < 0) {
             *is_error = 1;
-        else
+        } else {
             num_stack_push(s, sqrt(val));
+        }
     } else if (strcmp(token, "ln") == 0) {
         double val = num_stack_pop(s);
-        if (val <= 0)
+        if (val <= 0) {
             *is_error = 1;
-        else
+        } else {
             num_stack_push(s, log(val));
+        }
     } else if (strcmp(token, "u-") == 0) {
         num_stack_push(s, -num_stack_pop(s));
     } else {
@@ -70,20 +76,20 @@ void eval_operation(const char* token, num_stack* s, int* is_error) {
             num_stack_push(s, a * b);
             break;
         case '/':
-
-            if (fabs(b) < 1e-10)
+            if (fabs(b) < 1e-10) {
                 *is_error = 1;
-            else
+            } else {
                 num_stack_push(s, a / b);
+            }
             break;
         case '^':
-
-            if (a < 0 && floor(b) != b)
+            if (a < 0 && floor(b) != b) {
                 *is_error = 1;
-            else if (a == 0 && b < 0)
+            } else if (a == 0 && b < 0) {
                 *is_error = 1;
-            else
+            } else {
                 num_stack_push(s, pow(a, b));
+            }
             break;
         default:
             *is_error = 1;
@@ -97,38 +103,37 @@ double evaluate_rpn(const char* rpn, double x) {
     char token[MAX_SIZE];
     int token_len = 0;
 
-    for (int i = 0; rpn[i] != '\0'; i++) {
-        if (is_space(rpn[i]) && !is_error) {
+    for (int i = 0; rpn[i] != '\0' && !is_error; i++) {
+        if (is_space(rpn[i])) {
             if (token_len > 0) {
                 token[token_len] = '\0';
-                int eval_num_res = eval_num(token, &s);
-                int eval_func_res = 0;
-                if (!eval_num_res) {
-                    eval_func_res = eval_functions(token, &s, &is_error, x);
-                }
-                if (!eval_num_res && !eval_func_res) {
+                if (!eval_num(token, &s) && !eval_functions(token, &s, &is_error, x)) {
                     eval_operation(token, &s, &is_error);
                 }
                 token_len = 0;
             }
-        } else if (!is_error) {
+        } else {
             token[token_len++] = rpn[i];
         }
     }
-    double result = NAN;
-    if (!is_error && num_stack_is_empty(&s)) {
-        is_error = 1;
+
+    
+    if (token_len > 0 && !is_error) {
+        token[token_len] = '\0';
+        if (!eval_num(token, &s) && !eval_functions(token, &s, &is_error, x)) {
+            eval_operation(token, &s, &is_error);
+        }
     }
 
-    result = num_stack_pop(&s);
-
-    if (!is_error && !num_stack_is_empty(&s)) {
-        is_error = 1;
+    double result = NAN;
+    if (!is_error) {
+        if (num_stack_is_empty(&s)) {
+            is_error = 1;
+        } else {
+            result = num_stack_pop(&s);
+        }
     }
 
     num_stack_free(&s);
-
-    result = is_error ? NAN : result;
-
-    return result;
+    return is_error ? NAN : result;
 }
